@@ -4,6 +4,7 @@ Inference script to run the model on a new dataset
 
 import argparse
 import os
+from typing import Tuple
 
 import joblib
 import numpy as np
@@ -15,8 +16,8 @@ from evaluate.evaluate import top_quantile_threshold
 # Human-readable labels for engineered / less-obvious feature names, used
 # when building the top_risk_factors explanation strings.
 FEATURE_DESCRIPTIONS = {
-    "auth_gap": "prior authorization required but not on file",
-    "referral_gap": "referral required but not on file",
+    "prior_auth_vs_has_auth": "prior authorization required but not on file",
+    "ref_req_vs_ref_present": "referral required but not on file",
     "payment_ratio": "ratio of expected payment to billed amount",
     "prior_auth_required": "prior authorization required",
     "has_prior_auth": "prior authorization on file",
@@ -57,7 +58,7 @@ def top_risk_factors_for_row(row_transformed, coefs, feature_names, top_n=3):
     return "; ".join(factors)
 
 
-def assign_risk_slab(scores: np.ndarray) -> np.ndarray:
+def assign_risk_slab(scores: np.ndarray) -> Tuple[np.ndarray, float]:
     """High = top 25% by score (the reviewable quartile), Medium = next 25%,
     Low = bottom 50%. Thresholds are recomputed on this batch's own score
     distribution, since the review team's rule is 'top 25% of whatever came
@@ -87,7 +88,7 @@ def main():
     denial_probability = pipeline.predict_proba(X)[:, 1]
 
     # predicted_denial / risk_slab: thresholded at the top 25% of THIS batch
-    risk_tier, high_cut = assign_risk_tier(denial_probability)
+    risk_slab, high_cut = assign_risk_slab(denial_probability)
     predicted_denial = (denial_probability >= high_cut).astype(int)
 
     # top_risk_factors: per-row coefficient contributions
@@ -106,9 +107,15 @@ def main():
         "claim_id": df["claim_id"],
         "denial_probability": denial_probability,
         "predicted_denial": predicted_denial,
-        "risk_tier": risk_tier,
+        "risk_slab": risk_slab,
         "top_risk_factors": top_risk_factors,
-        "explanation": "",  # filled in for the top 10 by llm_explain.py
+        "explanation": "This is a sample explanation.",
+        # The explanation is a dummy placeholder.
+        # In the real scenario, an LLM API would be placed to generate a natural language explanation
+        # based on the top_risk_factors and other relevant information.
+        # Use the utils.py inside src/utils/utils.py to generate the explanation based on the prompt template.
+        # Pass the risk factors and probability to the utility function
+        # Get the claim facts using the utility inside utility.py
     })
     out = out.sort_values("denial_probability", ascending=False).reset_index(drop=True)
 
@@ -117,8 +124,6 @@ def main():
     out.to_csv(output_path, index=False)
 
     print(f"Scored {len(out)} claims.")
-    print(f"High-risk threshold (top {int(args.top_frac*100)}%): {high_cut:.4f}")
-    print(out["risk_tier"].value_counts())
     print(f"\nSaved predictions to {output_path}")
     print("\nTop 5 highest-risk claims:")
     print(out.head(5).to_string(index=False))
