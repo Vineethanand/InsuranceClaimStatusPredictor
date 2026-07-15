@@ -15,7 +15,7 @@ import numpy as np
 
 from data.preprocess import load_claims_data, split_data_for_training, ALL_FEATURES, TARGET
 from model.claim_predictor_model import build_model_pipeline
-
+from evaluate.evaluate import get_eval_report
 
 def main():
     parser = argparse.ArgumentParser(description="Train a claim denial classifier.")
@@ -40,16 +40,16 @@ def main():
     pipeline.fit(X_train, y_train)
 
     val_scores = pipeline.predict_proba(X_val)[:, 1]
-    val_report = full_report(y_val, val_scores, args.top_frac)
+    val_report = get_eval_report(y_val, val_scores, args.top_frac)
 
     test_scores = pipeline.predict_proba(X_test)[:, 1]
-    test_report = full_report(y_test, test_scores, args.top_frac)
+    test_report = get_eval_report(y_test, test_scores, args.top_frac)
 
-    model_path = os.path.join(args.output_dir, f"{args.model}.pkl")
+    model_path = os.path.join(args.output_dir, "claim_predictor_model.pkl")
     joblib.dump(pipeline, model_path)
 
     metrics = {"model": "logistic_regression", "seed": args.seed, "validation": val_report, "test": test_report}
-    metrics_path = os.path.join(args.output_dir, f"{args.model}_metrics.json")
+    metrics_path = os.path.join(args.output_dir, "claim_predictor_model_metrics.json")
     with open(metrics_path, "w") as f:
         json.dump(metrics, f, indent=2)
 
