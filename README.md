@@ -44,6 +44,10 @@ python src/inference/inference.py \
   --top_frac 0.25
 ```
 
+## Write-up
+
+A detailed write-up describing the approach is available in [Claim_Denial_Prediction.pdf](Claim_Denial_Prediction.pdf).
+
 ## Requirements
 
 The required Python packages are listed in `requirements.txt`.
