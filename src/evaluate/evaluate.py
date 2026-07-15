@@ -4,7 +4,7 @@ Metric functions built around the assessment's actual operating constraint:
 the review team can only inspect the top 25% of claims by risk score.
 
 Can also be run standalone:
-    python src/evaluate.py --model_path outputs/logisticreg.pkl --data_path data/claims_history.csv
+    python src/evaluate.py --model_path outputs/model.pkl --data_path data/claims_history.csv
 """
 
 import argparse
